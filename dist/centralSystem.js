@@ -140,54 +140,66 @@ var CentralSystem = function () {
     }
   }, {
     key: 'onNewConnection',
-    value: function onNewConnection(socket, req) {
-      var _this2 = this;
-
-      socket.on('error', function (err) {
-        console.info(err, socket.readyState);
-      });
-
-      if (req.url === _logger.LOGGER_URL) {
-        this.logger.addSocket(socket);
-        return;
-      }
-
-      if (!socket.protocol) {
-        // From Spec: If the Central System does not agree to using one of the subprotocols offered by the client,
-        // it MUST complete the WebSocket handshake with a response without a Sec-WebSocket-Protocol header and then
-        // immediately close the WebSocket connection.
-        this.logger.debug('Close connection due to unsupported protocol');
-        return socket.close();
-      }
-
-      var connection = new _connection.Connection(socket, req, this.logger);
-
-      var client = new _centralSystemClient2.default(connection);
-      client.poleId = client.connection.url.replace('/', '');
-      client.stationId = this.options.redisClient.hget(this.options.RedisKey.Pole_Station_Table_Hash(), client.poleId);
-      connection.onRequest = function (command) {
-        return _this2.onRequest(client, command);
-      };
-
-      socket.on('close', function (err) {
-        if (err) {
-          console.log(err);
-        }
-        var index = _this2.clients.indexOf(client);
-        _this2.clients.splice(index, 1);
-        _this2.options.redisClient.hmset(_this2.options.RedisKey.Station_Info_Hash(client.stationId), ['poleStatus_' + client.poleId]);
-        _this2.options.redisClient.hmset(_this2.options.RedisKey.Poles_Info_Hash(), ['poleStatus_' + client.poleId]);
-      });
-      this.clients.push(client);
-    }
-  }, {
-    key: 'onRequest',
     value: function () {
-      var _ref2 = (0, _asyncToGenerator3.default)( /*#__PURE__*/_regenerator2.default.mark(function _callee2(client, command) {
+      var _ref2 = (0, _asyncToGenerator3.default)( /*#__PURE__*/_regenerator2.default.mark(function _callee2(socket, req) {
+        var _this2 = this;
+
+        var connection, client;
         return _regenerator2.default.wrap(function _callee2$(_context2) {
           while (1) {
             switch (_context2.prev = _context2.next) {
               case 0:
+                socket.on('error', function (err) {
+                  console.info(err, socket.readyState);
+                });
+
+                if (!(req.url === _logger.LOGGER_URL)) {
+                  _context2.next = 4;
+                  break;
+                }
+
+                this.logger.addSocket(socket);
+                return _context2.abrupt('return');
+
+              case 4:
+                if (socket.protocol) {
+                  _context2.next = 7;
+                  break;
+                }
+
+                // From Spec: If the Central System does not agree to using one of the subprotocols offered by the client,
+                // it MUST complete the WebSocket handshake with a response without a Sec-WebSocket-Protocol header and then
+                // immediately close the WebSocket connection.
+                this.logger.debug('Close connection due to unsupported protocol');
+                return _context2.abrupt('return', socket.close());
+
+              case 7:
+                connection = new _connection.Connection(socket, req, this.logger);
+                client = new _centralSystemClient2.default(connection);
+
+                client.poleId = client.connection.url.replace('/', '');
+                _context2.next = 12;
+                return this.options.redisClient.hget(this.options.RedisKey.Pole_Station_Table_Hash(), client.poleId);
+
+              case 12:
+                client.stationId = _context2.sent;
+
+                connection.onRequest = function (command) {
+                  return _this2.onRequest(client, command);
+                };
+
+                socket.on('close', function (err) {
+                  if (err) {
+                    console.log(err);
+                  }
+                  var index = _this2.clients.indexOf(client);
+                  _this2.clients.splice(index, 1);
+                  _this2.options.redisClient.hmset(_this2.options.RedisKey.Station_Info_Hash(client.stationId), ['poleStatus_' + client.poleId]);
+                  _this2.options.redisClient.hmset(_this2.options.RedisKey.Poles_Info_Hash(), ['poleStatus_' + client.poleId]);
+                });
+                this.clients.push(client);
+
+              case 16:
               case 'end':
                 return _context2.stop();
             }
@@ -195,8 +207,29 @@ var CentralSystem = function () {
         }, _callee2, this);
       }));
 
-      function onRequest(_x5, _x6) {
+      function onNewConnection(_x5, _x6) {
         return _ref2.apply(this, arguments);
+      }
+
+      return onNewConnection;
+    }()
+  }, {
+    key: 'onRequest',
+    value: function () {
+      var _ref3 = (0, _asyncToGenerator3.default)( /*#__PURE__*/_regenerator2.default.mark(function _callee3(client, command) {
+        return _regenerator2.default.wrap(function _callee3$(_context3) {
+          while (1) {
+            switch (_context3.prev = _context3.next) {
+              case 0:
+              case 'end':
+                return _context3.stop();
+            }
+          }
+        }, _callee3, this);
+      }));
+
+      function onRequest(_x7, _x8) {
+        return _ref3.apply(this, arguments);
       }
 
       return onRequest;

@@ -59,7 +59,7 @@ export default class CentralSystem {
     debug(`Listen on ${host || 'default host'}:${port}`);
   }
 
-  onNewConnection (socket, req) {
+  async onNewConnection (socket, req) {
     socket.on('error', (err) => {
       console.info(err, socket.readyState);
     });
@@ -81,7 +81,7 @@ export default class CentralSystem {
 
     const client = new CentralSystemClient(connection);
     client.poleId = client.connection.url.replace('/', '');
-    client.stationId = this.options.redisClient.hget(this.options.RedisKey.Pole_Station_Table_Hash(), client.poleId);
+    client.stationId = await this.options.redisClient.hget(this.options.RedisKey.Pole_Station_Table_Hash(), client.poleId);
     connection.onRequest = (command) => this.onRequest(client, command);
 
     socket.on('close', (err) => {
