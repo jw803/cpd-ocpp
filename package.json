@@ -1,6 +1,6 @@
 {
-  "name": "ocpp-eliftech",
-  "version": "1.0.1",
+  "name": "@paul803/ocpp",
+  "version": "1.0.0",
   "description": "OCPP 1.6: Open Charge Point Protocol",
   "main": "dist/index.js",
   "scripts": {
@@ -16,6 +16,14 @@
     "url": "git+https://github.com/elifTech/cpd-ocpp.git"
   },
   "author": "Vitalii Savchuk <esvit666@gmail.com>",
+  "contributors": [
+    {
+      "name": "Paul",
+      "author": "Paul He",
+      "email" : "jw80301@gmail.com", 
+      "url" : "https://github.com/jw803"
+    }
+  ],
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/elifTech/cpd-ocpp/issues"

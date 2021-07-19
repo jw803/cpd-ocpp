@@ -80,12 +80,18 @@ export default class CentralSystem {
     const connection = new Connection(socket, req, this.logger);
 
     const client = new CentralSystemClient(connection);
-
+    client.poleId = client.connection.url.replace('/', '');
+    client.stationId = this.options.redisClient.hget(this.options.RedisKey.Pole_Station_Table_Hash(), client.poleId);
     connection.onRequest = (command) => this.onRequest(client, command);
 
     socket.on('close', (err) => {
+      if (err) {
+        console.log(err);
+      }
       const index = this.clients.indexOf(client);
       this.clients.splice(index, 1);
+      this.options.redisClient.hmset(this.options.RedisKey.Station_Info_Hash(client.stationId), [`poleStatus_${client.poleId}`]);
+      this.options.redisClient.hmset(this.options.RedisKey.Poles_Info_Hash(), [`poleStatus_${client.poleId}`]);
     });
     this.clients.push(client);
   }

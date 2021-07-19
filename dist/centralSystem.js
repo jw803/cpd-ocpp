@@ -32,6 +32,10 @@ var _debug = require('debug');
 
 var _debug2 = _interopRequireDefault(_debug);
 
+var _logger = require('./logger');
+
+var _logger2 = _interopRequireDefault(_logger);
+
 var _connection = require('./connection');
 
 var _constants = require('./constants');
@@ -50,6 +54,7 @@ var CentralSystem = function () {
 
     this.options = options || {};
     this.clients = [];
+    this.logger = new _logger2.default();
   }
 
   (0, _createClass3.default)(CentralSystem, [{
@@ -82,18 +87,27 @@ var CentralSystem = function () {
               while (1) {
                 switch (_context.prev = _context.next) {
                   case 0:
-                    _context.next = 2;
+                    if (!(info.req.url === _logger.LOGGER_URL)) {
+                      _context.next = 3;
+                      break;
+                    }
+
+                    debug('Logger connected');
+                    return _context.abrupt('return', cb(true));
+
+                  case 3:
+                    _context.next = 5;
                     return validateConnection(info.req.url);
 
-                  case 2:
+                  case 5:
                     isAccept = _context.sent;
 
 
-                    debug('Request for connect "' + info.req.url + '" (' + info.req.headers['sec-websocket-protocol'] + ') - ' + (isAccept ? 'Valid identifier' : 'Invalid identifier'));
+                    _this.logger.debug('Request for connect "' + info.req.url + '" (' + info.req.headers['sec-websocket-protocol'] + ') - ' + (isAccept ? 'Valid identifier' : 'Invalid identifier'));
 
                     cb(isAccept, 404, 'Central System does not recognize the charge point identifier in the URL path');
 
-                  case 5:
+                  case 8:
                   case 'end':
                     return _context.stop();
                 }
@@ -133,25 +147,36 @@ var CentralSystem = function () {
         console.info(err, socket.readyState);
       });
 
+      if (req.url === _logger.LOGGER_URL) {
+        this.logger.addSocket(socket);
+        return;
+      }
+
       if (!socket.protocol) {
         // From Spec: If the Central System does not agree to using one of the subprotocols offered by the client,
         // it MUST complete the WebSocket handshake with a response without a Sec-WebSocket-Protocol header and then
         // immediately close the WebSocket connection.
-        debug('Close connection due to unsupported protocol');
+        this.logger.debug('Close connection due to unsupported protocol');
         return socket.close();
       }
 
-      var connection = new _connection.Connection(socket, req);
+      var connection = new _connection.Connection(socket, req, this.logger);
 
       var client = new _centralSystemClient2.default(connection);
-
+      client.poleId = client.connection.url.replace('/', '');
+      client.stationId = this.options.redisClient.hget(this.options.RedisKey.Pole_Station_Table_Hash(), client.poleId);
       connection.onRequest = function (command) {
         return _this2.onRequest(client, command);
       };
 
       socket.on('close', function (err) {
+        if (err) {
+          console.log(err);
+        }
         var index = _this2.clients.indexOf(client);
         _this2.clients.splice(index, 1);
+        _this2.options.redisClient.hmset(_this2.options.RedisKey.Station_Info_Hash(client.stationId), ['poleStatus_' + client.poleId]);
+        _this2.options.redisClient.hmset(_this2.options.RedisKey.Poles_Info_Hash(), ['poleStatus_' + client.poleId]);
       });
       this.clients.push(client);
     }
